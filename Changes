@@ -1,5 +1,10 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.05  Thu Mar 10 2005
+	- no longer install Runmode attribute handler into 
+		CGI::App, but export into caller's namespace
+	- added FileDelegate
+		
 0.04  Fri Mar 04 2005 
 	- security fix: disallow non-word characters in runmode name
 

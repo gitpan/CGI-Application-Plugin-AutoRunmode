@@ -6,17 +6,30 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
+# always export the attribute handlers
+sub import{
+		__PACKAGE__->export_to_level(1, @_, qw[
+		 	MODIFY_CODE_ATTRIBUTES
+			FETCH_CODE_ATTRIBUTES
+		 ]
+		 );
+};
 
 our @EXPORT_OK = qw[
 		cgiapp_prerun
+		MODIFY_CODE_ATTRIBUTES
+		FETCH_CODE_ATTRIBUTES
 	];
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 our %__illegal_names = qw[ 
 	can can
 	isa isa
 	VERSION VERSION
+	AUTOLOAD AUTOLOAD
+	new	new
+	DESTROY DESTROY
 ];
 
 sub cgiapp_prerun{
@@ -46,7 +59,12 @@ sub cgiapp_prerun{
 			my $delegate = $self->param('::Plugin::AutoRunmode::delegate');
 			if ($delegate and not exists $__illegal_names{$rm}){
 				$sub = $delegate->can($rm);
-				$self->run_modes( $rm => $sub ) if $sub;
+				if ($sub){
+					# construct a closure, as we need a second
+					# parameter (the delegate)
+					my $closure = sub { $sub->($_[0], $delegate); };
+					$self->run_modes( $rm => $closure);
+				}
 			}
 		}
 	}
@@ -57,8 +75,6 @@ sub install{
 	$app->add_callback('prerun', \&cgiapp_prerun, 'LAST');
 }
 
-{
-package CGI::Application;
 
 sub MODIFY_CODE_ATTRIBUTES{
 	my ($pkg, $ref, @attr) = @_;
@@ -77,7 +93,6 @@ sub FETCH_CODE_ATTRIBUTES{
 	return $sub ? ('Runmode') : (); 
 }
 
-}
 
 1;
 __END__
@@ -105,16 +120,18 @@ Using subroutine attributes:
 	
 	# you now have two run modes
 	# "my_run_mode" and "another_run_mode"
-   
+
+
 Using a delegate object
 
   	package MyAppRunmodes;
 	# the delegate class
-		sub my_run_mode : Runmode {
+		sub my_run_mode  {
+			my ($app, $delegate) = @_;
 				# do something here
 		}
 	    
-		sub another_run_mode : Runmode {
+		sub another_run_mode  {
 				# do something else
 		}
 		
@@ -145,6 +162,11 @@ in your CGI::App subclass with the attribute "Runmode",
 or you can assign a delegate object, all whose methods
 will become runmodes (you can also mix both approaches).
 
+Delegate runmodes receive two parameters: The first one
+is the CGI::App instance, followed by the delegate instance
+or class name. This can be useful if you have delegate objects
+that contain state.
+
 It both cases, the resulting runmodes will have the same
 name as the subroutine that implements them, and you can
 use the  cgiapp_prerun method provided by this plugin to
@@ -166,12 +188,25 @@ invoke the plugin's code from within your method:
 	# if you already have your own cgiapp_prerun
 	# do this:
 	use CGI::Application::Plugin::AutoRunmode;
-		# import nothing
 	
 	sub cgiapp_prerun{
 		CGI::Application::Plugin::AutoRunmode::cgiapp_prerun(@_);
 		# your code goes here
 	}
+
+Even if you do not import cgiapp_prerun from the plugin,
+make sure you still have the default imports, which are
+necessary to enable the Runmode attribute.
+Unless you are not using these attributes (because you like
+the delegate object approach more), you must do
+
+	use CGI::Application::Plugin::AutoRunmode;
+
+and not
+
+	use CGI::Application::Plugin::AutoRunmode ();
+		# this will disable the Runmode attributes
+
 
 =head3 using the callback interface
 
@@ -183,7 +218,7 @@ and you can also change the runmode from within these prerun modes.
 
 	package MyApp;
 	use base 'CGI::Application::Callbacks';
-	use CGI::Application::Plugin::AutoRunmode ();
+	use CGI::Application::Plugin::AutoRunmode;
 	
 	sub setup{
 		my $self = shift;
@@ -197,9 +232,15 @@ and you can also change the runmode from within these prerun modes.
 =head2 How does it work?
 
 After CGI::App has determined the name of the
-runmode to be executed in the normal way, 
-cgiapp_prerun checks if such a runmode exists
+run mode to be executed in the normal way, 
+cgiapp_prerun checks if such a run mode exists
 in the map configured by $self->run_modes().
+
+If the run mode already exists, it gets executed
+normally (this module does nothing). This means
+that you can mix the ways to declare run modes
+offered by this plugin with the style provided 
+by core CGI::App.
 
 If that is not the case, it tries to find a method
 of the same name
@@ -234,10 +275,19 @@ Also, you have to make sure that when using a delegate
 object, that it (and its superclasses) only contain
 run modes (and no other subroutines).
 
+The following run mode names are disallowed
+by this module:
+
+	can isa VERSION AUTOLOAD new DESTROY
+
 
 =head1 SEE ALSO
 
 =over
+
+=item *
+
+L<CGI::Application::Plugin::AutoRunmode::FileDelegate>
 
 =item *
 

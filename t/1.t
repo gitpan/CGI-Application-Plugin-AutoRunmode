@@ -13,8 +13,9 @@ BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode') };
 { 
 	package MyTestApp;
 	use base 'CGI::Application';
-	use CGI::Application::Plugin::AutoRunmode 
-		qw [ cgiapp_prerun];
+	use CGI::Application::Plugin::AutoRunmode
+		qw [ cgiapp_prerun ];
+	
 	
 	 sub mode1 : Runmode {
 	 	'called mode1';
@@ -88,6 +89,7 @@ my $q = new CGI;
        	my $has_callbacks = <<'CALLBACKS'; 
 	package MyCallBackTest;
 	use base  'CGI::Application::Callbacks';
+	use CGI::Application::Plugin::AutoRunmode;
 	
 	sub setup{
 		my $self = shift;

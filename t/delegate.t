@@ -1,7 +1,7 @@
 #########################
 
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode') };
 
 #########################
@@ -25,9 +25,10 @@ BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode') };
 	package MyTestDelegate;
 	
 	 sub mode1  {
-	 	my ($self) = @_;
+	 	my ($self, $delegate) = @_;
 		die "expected CGI::App instance as first parameter" unless $self->isa('CGI::Application');
-	 	'called mode1';
+		die "expected delegate class or instance as second parameter" unless $delegate;
+		'called mode1';
 	 }
 }
 
@@ -73,6 +74,11 @@ my $q = new CGI;
 	 sub mode2  {
 	 	'called mode2';
 	 }
+	 
+	 sub mode3{
+	 	my ($app, $delegate) = @_;
+		'called mode3 '.$delegate->{hey};
+	}
 }
 
 
@@ -103,4 +109,15 @@ my $q = new CGI;
 	eval{ my $t = $app->run; };
 	ok ($@ =~ /^No such/, $testname);
 }
+
+{	
+	my $testname = "stateful delegate";
+	$q->param(rm => 'mode3');
+	my $app = new MyTestApp(QUERY=>$q);
+	$app->param("::Plugin::AutoRunmode::delegate"
+		=> bless {hey => 'aaa'}, 'MyTestSubDelegate');
+	my $t = $app->run;
+	ok ($t =~ /called mode3 aaa/, $testname);
+}
+
 

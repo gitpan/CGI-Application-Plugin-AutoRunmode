@@ -1,4 +1,4 @@
-CGI/Application/Plugin/AutoRunmode version 0.04
+CGI/Application/Plugin/AutoRunmode version 0.05
 ===============================================
 
 This plugin for CGI::Application provides easy
@@ -10,6 +10,10 @@ There are two approaches: You can flag methods
 in your CGI::App subclass with the attribute "Runmode",
 or you can assign a delegate object, all whose methods
 will become runmodes (you can also mix both approaches).
+
+A third approach is to use a delegate object that
+delegates to Perl source files on disk, an implementation
+of which is included herein.
 
 
 INSTALLATION
