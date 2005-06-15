@@ -63,7 +63,7 @@ my $q = new CGI;
 	eval{ 
 		my $t = $app->run;
 		};
-	ok ($@ =~ /No such run mode/, $testname);
+	ok ($@ =~ /No such run.mode/, $testname);
 }
 	
 # delegate subclass

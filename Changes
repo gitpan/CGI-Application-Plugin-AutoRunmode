@@ -1,5 +1,10 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.06  Wed Jun 15 2005
+    - replaced CGI::Application::Callbacks with official hook 
+        system provided by CGI::App version 4
+    - removed Perl 5.8.1 requirement
+
 0.05  Thu Mar 10 2005
 	- no longer install Runmode attribute handler into 
 		CGI::App, but export into caller's namespace

@@ -3,6 +3,9 @@ package CGI::Application::Plugin::AutoRunmode;
 use strict;
 use attributes;
 require Exporter;
+require CGI::Application;
+
+our $VERSION = '0.06';
 
 our @ISA = qw(Exporter);
 
@@ -13,6 +16,14 @@ sub import{
 			FETCH_CODE_ATTRIBUTES
 		 ]
 		 );
+		 # if CGI::App > 4 install the hook
+		 # (unless cgiapp_prerun requested)
+		 if ( @_ < 2 and $CGI::Application::VERSION >= 4 ){
+		 		my $caller = scalar(caller);
+		 		if (UNIVERSAL::isa($caller, 'CGI::Application')){
+                	$caller->add_callback('prerun', \&cgiapp_prerun);
+                }
+		 }
 };
 
 our @EXPORT_OK = qw[
@@ -21,7 +32,7 @@ our @EXPORT_OK = qw[
 		FETCH_CODE_ATTRIBUTES
 	];
 
-our $VERSION = '0.05';
+
 
 our %__illegal_names = qw[ 
 	can can
@@ -40,6 +51,7 @@ sub cgiapp_prerun{
 	if (length($prerun_mode)) {
 		$rm = $prerun_mode;
 	}
+	return unless defined $rm;
 	
 	unless (exists $rmodes{$rm}){
 		# security check: disallow non-word characters 
@@ -70,10 +82,6 @@ sub cgiapp_prerun{
 	}
 }
 
-sub install{
-	my ($package, $app) = @_;
-	$app->add_callback('prerun', \&cgiapp_prerun, 'LAST');
-}
 
 
 sub MODIFY_CODE_ATTRIBUTES{
@@ -107,8 +115,7 @@ Using subroutine attributes:
 
 	package MyApp;
 	use base 'CGI::Application';
-	use CGI::Application::Plugin::AutoRunmode 
-		qw [ cgiapp_prerun];
+	use CGI::Application::Plugin::AutoRunmode;
 	
 	sub my_run_mode : Runmode {
 		# do something here
@@ -137,8 +144,6 @@ Using a delegate object
 		
 	package MyApp;
    	use base 'CGI::Application';
-	use CGI::Application::Plugin::AutoRunmode 
-		qw [ cgiapp_prerun];
 	   
 		sub setup{
 			my ($self) = @_;
@@ -154,7 +159,7 @@ Using a delegate object
 
 This plugin for CGI::Application provides easy
 ways to setup run modes. You can just write
-the methods that implement a run mode, you do
+the method that implement a run mode, you do
 not have to explicitly register it with CGI::App anymore.
 
 There are two approaches: You can flag methods
@@ -168,37 +173,29 @@ or class name. This can be useful if you have delegate objects
 that contain state.
 
 It both cases, the resulting runmodes will have the same
-name as the subroutine that implements them, and you can
-use the  cgiapp_prerun method provided by this plugin to
-activate them.
+name as the subroutine that implements them. They are activated
+by a cgiapp_prerun hook provided by this plugin (if 
+you are using CGI::Application older than version 4, hooks
+are not available, and you can import a cgiapp_prerun method
+instead).
 
 
 =head2 EXPORT
 
-The module can export a cgiapp_prerun,
-which you should import unless you already
-have such a method.
+This module needs to export some symbols to do 
+its job.
 
-	use CGI::Application::Plugin::AutoRunmode 
-		qw [ cgiapp_prerun];
+First of all, there are the handlers for the Runmode 
+attribute.
 
-If you already have a cgiapp_prerun, you have to
-invoke the plugin's code from within your method:
-
-	# if you already have your own cgiapp_prerun
-	# do this:
-	use CGI::Application::Plugin::AutoRunmode;
-	
-	sub cgiapp_prerun{
-		CGI::Application::Plugin::AutoRunmode::cgiapp_prerun(@_);
-		# your code goes here
-	}
-
-Even if you do not import cgiapp_prerun from the plugin,
-make sure you still have the default imports, which are
-necessary to enable the Runmode attribute.
-Unless you are not using these attributes (because you like
-the delegate object approach more), you must do
+In addition to that, the cgiapp_prerun hook is installed
+in your application class.
+This is not done as an export per se, but the hook installation 
+is still
+done in the import subroutine. Sound confusing, is confusing,
+but you do not really need to know what is going on exactly,
+just keep in mind that in order to let things go on, you
+have to "use" the module with the default exports:
 
 	use CGI::Application::Plugin::AutoRunmode;
 
@@ -206,28 +203,21 @@ and not
 
 	use CGI::Application::Plugin::AutoRunmode ();
 		# this will disable the Runmode attributes
+		# DO NOT DO THIS
+		
+
+You can also explicitly import the cgiapp_prerun method.
+This will disable the installation of the hook.
+Basically, you only want to do this if you are using
+CGI::Application prior to version 4, where hooks are
+not supported.
+
+	use CGI::Application::Plugin::AutoRunmode 
+		qw [ cgiapp_prerun];
+		# do this if you use CGI::Application version 3.x
 
 
-=head3 using the callback interface
 
-You can also use the new callback interface of CGI::Application::Callbacks.
-By calling the install method, this plugin will install itself
-as a callback in the LAST position of the PRERUN phase.
-This setup enables you to provide additional prerun modes,
-and you can also change the runmode from within these prerun modes.
-
-	package MyApp;
-	use base 'CGI::Application::Callbacks';
-	use CGI::Application::Plugin::AutoRunmode;
-	
-	sub setup{
-		my $self = shift;
-		install CGI::Application::Plugin::AutoRunmode($self);
-	}
-	
-	sub do_something : Runmode{
-		# ....
-	}
 
 =head2 How does it work?
 
@@ -256,6 +246,26 @@ object for one that matches the name of the runmode.
 The runmode can then be executed by CGI::App
 as if it had been set up by $self->run_modes()
 in the first place.
+
+
+=head2 Does it still work if I change the run-mode in cgiapp_prerun ?
+
+
+If you have a cgiapp_prerun method and change the run-mode
+there, the installed hook will not be able to catch it
+(because of the ordering of hooks).
+
+So, if you do that, you have to explicitly make this call
+before returning from cgiapp_prerun:
+	
+   CGI::Application::Plugin::AutoRunmode::cgiapp_prerun($self);
+
+Again, this is only necessary if you change the run-mode
+(to one that needs the auto-detection feature).
+
+Also, this kind of code can be used with CGI::App 3.x
+if you have a cgiapp_prerun.
+
 
 
 =head2 A word on security

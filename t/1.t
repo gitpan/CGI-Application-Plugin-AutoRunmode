@@ -58,6 +58,29 @@ my $q = new CGI;
 	 }
 }
 
+# Callback test package
+{
+
+	package MyCallBackTest;
+	use base  'CGI::Application';
+	use CGI::Application::Plugin::AutoRunmode;
+		
+	 sub mode2 : Runmode {
+	 	'called mode2';
+	 }
+	 
+	 sub cgiapp_prerun{
+	 	my ($self, $rm) = @_;
+		$self->prerun_mode('mode2')
+			if $rm eq 'change_to_2';
+		CGI::Application::Plugin::AutoRunmode::cgiapp_prerun($self);
+	 }
+
+
+}
+
+
+
 
 {	
 	my $testname = "runmode from a superclass";
@@ -84,32 +107,12 @@ my $q = new CGI;
 }
 
 
-# CGI::App::Callbacks tests
+# CGI::App::Callbacks tests (4.0 hooks)
  SKIP: {
-       	my $has_callbacks = <<'CALLBACKS'; 
-	package MyCallBackTest;
-	use base  'CGI::Application::Callbacks';
-	use CGI::Application::Plugin::AutoRunmode;
-	
-	sub setup{
-		my $self = shift;
-		install CGI::Application::Plugin::AutoRunmode($self);
-	}
-	
-	 sub mode2 : Runmode {
-	 	'called mode2';
-	 }
-	 
-	 sub cgiapp_prerun{
-	 	my ($self, $rm) = @_;
-		$self->prerun_mode('mode2')
-			if $rm eq 'change_to_2';
-	 }
-1;
-CALLBACKS
-
-	$has_callbacks = eval $has_callbacks;
-	skip 'no CGI::App::Callbacks', 2 
+ 	my $has_callbacks = $CGI::Application::VERSION >= 4;
+ 	
+ 
+	skip 'callback hooks require CGI::Application version 4', 2 
 	     	unless $has_callbacks;
 
 
