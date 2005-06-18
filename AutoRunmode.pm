@@ -5,7 +5,7 @@ use attributes;
 require Exporter;
 require CGI::Application;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 our @ISA = qw(Exporter);
 
@@ -306,7 +306,7 @@ L<CGI::Application>
 =item *
 
 The CGI::App wiki at 
-L<http://twiki.med.yale.edu/twiki2/bin/view/CGIapp/WebHome>.
+L<http://www.cgi-app.org/>.
 
 =back
 
