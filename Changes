@@ -1,5 +1,10 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.08  Sat Jul 17 2005
+	- :StartRunmode
+	- attribute names are now case-insensitive
+	- documentation patches (thanks to Mark Stosberg)
+
 0.07  Sat Jun 18 2005
 	- removed Mac OS X meta data files that confused the build system
 		(see http://perlmonks.org/?node_id=467916 )

@@ -3,7 +3,7 @@ package CGI::Application::Plugin::AutoRunmode::FileDelegate;
 use strict;
 use Carp;
 
-our $VERSION = '0.05';
+our $VERSION = '0.08';
 
 sub new{
 	my ($pkg, $directory) = @_;

@@ -4,8 +4,9 @@ use strict;
 use attributes;
 require Exporter;
 require CGI::Application;
+use Carp;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 our @ISA = qw(Exporter);
 
@@ -88,8 +89,23 @@ sub MODIFY_CODE_ATTRIBUTES{
 	my ($pkg, $ref, @attr) = @_;
 	my @unknown;
 	foreach (@attr){
+		my $u = uc $_;
 		$CGI::Application::Plugin::AutoRunmode::RUNMODES{"$ref"} = 1, next
-			if $_ eq 'Runmode';
+			if $u eq 'RUNMODE';
+		if ($u eq 'STARTRUNMODE'){
+			no strict 'refs';
+			die "StartRunmode for package $pkg is already installed\n"
+				if defined *{"${pkg}::start_mode"};
+			my $memory;
+			*{"${pkg}::start_mode"} = sub{
+				 return if @_ > 1;
+				 return $memory if $memory;
+				 return $memory = _find_name_of_startmode_in_pkg($ref, $pkg);
+			};
+			
+			$CGI::Application::Plugin::AutoRunmode::RUNMODES{"$ref"} = 1;
+			next;
+		}
 		push @unknown, $_;
 	}
 	return @unknown;
@@ -100,6 +116,25 @@ sub FETCH_CODE_ATTRIBUTES{
 	$sub = $CGI::Application::Plugin::AutoRunmode::RUNMODES{"$sub"};
 	return $sub ? ('Runmode') : (); 
 }
+
+# code for this inspired by Devel::Symdump
+sub _find_name_of_startmode_in_pkg{
+	my ($ref, $pkg) = @_;
+	no strict;
+	while (($key,$val) = each(%{*{"$pkg\::"}})) {
+			local(*ENTRY) = $val;
+			if (defined $val && defined *ENTRY{CODE}) {
+				next unless *ENTRY{CODE} eq $ref;
+				# rewind "each"
+				my $a = scalar keys %{*{"$pkg\::"}};
+				return $key;
+			}
+		}
+
+	die "failed to find name for StartRunmode code ref $ref in package $pkg\n";
+}
+
+
 
 
 1;
@@ -117,7 +152,7 @@ Using subroutine attributes:
 	use base 'CGI::Application';
 	use CGI::Application::Plugin::AutoRunmode;
 	
-	sub my_run_mode : Runmode {
+	sub my_run_mode : StartRunmode {
 		# do something here
 	}
 	
@@ -127,9 +162,10 @@ Using subroutine attributes:
 	
 	# you now have two run modes
 	# "my_run_mode" and "another_run_mode"
+	# "my_run_mode" is the start (default) run mode
 
 
-Using a delegate object
+Declare that every method in a (delegate) class is a run mode. 
 
   	package MyAppRunmodes;
 	# the delegate class
@@ -162,15 +198,28 @@ ways to setup run modes. You can just write
 the method that implement a run mode, you do
 not have to explicitly register it with CGI::App anymore.
 
-There are two approaches: You can flag methods
-in your CGI::App subclass with the attribute "Runmode",
-or you can assign a delegate object, all whose methods
-will become runmodes (you can also mix both approaches).
+There are two approaches: 
 
-Delegate runmodes receive two parameters: The first one
-is the CGI::App instance, followed by the delegate instance
-or class name. This can be useful if you have delegate objects
-that contain state.
+=over 4
+
+=item Declare run modes with subroutine attributes. 
+
+You can flag methods in
+your CGI::App subclass with the attribute "Runmode" or "StartRunmode" (these
+attributes are case-insensitive)
+
+=item Declare that every method in a class is a run mode.
+
+You can assign a
+delegate object, all whose methods will become runmodes 
+
+You can also mix both approaches.
+
+Delegate runmodes receive two parameters: The first one is the CGI::App
+instance, followed by the delegate instance or class name. This can be useful
+if you have delegate objects that contain state.
+
+=back
 
 It both cases, the resulting runmodes will have the same
 name as the subroutine that implements them. They are activated
@@ -248,10 +297,10 @@ as if it had been set up by $self->run_modes()
 in the first place.
 
 
-=head2 Does it still work if I change the run-mode in cgiapp_prerun ?
+=head2 Does it still work if I change the run mode in cgiapp_prerun ?
 
 
-If you have a cgiapp_prerun method and change the run-mode
+If you have a cgiapp_prerun method and change the run mode
 there, the installed hook will not be able to catch it
 (because of the ordering of hooks).
 
@@ -260,13 +309,20 @@ before returning from cgiapp_prerun:
 	
    CGI::Application::Plugin::AutoRunmode::cgiapp_prerun($self);
 
-Again, this is only necessary if you change the run-mode
+Again, this is only necessary if you change the run mode
 (to one that needs the auto-detection feature).
 
 Also, this kind of code can be used with CGI::App 3.x
 if you have a cgiapp_prerun.
 
+=head2 StartRunmode
 
+The attribute StartRunmode designates that subroutine to 
+be the start (default) run mode. If you use this feature,
+the "traditional" way of setting the start run mode (calling
+C<< $self->start_mode('name') >>) is disabled and can no longer
+be used in this application (including subclasses and instance
+scripts).
 
 =head2 A word on security
 

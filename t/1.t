@@ -4,7 +4,7 @@
 #########################
 
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode') };
 
 #########################
@@ -36,6 +36,33 @@ my $q = new CGI;
 	my $testname = "autodetect runmode in CGI::App class";
 	
 	my $app = new MyTestApp(QUERY=>$q);
+	my $t = $app->run;
+	ok ($t =~ /called mode1/, $testname);
+}
+
+
+{ 
+	package MyTestAppCased;
+	use base 'CGI::Application';
+	use CGI::Application::Plugin::AutoRunmode
+		qw [ cgiapp_prerun ];
+	
+	
+	 sub mode1 : RunMode {
+	 	'called mode1';
+	 }
+	 
+	 sub not_a_runmode{
+	 	'not a runmode';
+	}
+}
+
+
+
+{
+	my $testname = "case insensitivity";
+	
+	my $app = new MyTestAppCased(QUERY=>$q);
 	my $t = $app->run;
 	ok ($t =~ /called mode1/, $testname);
 }
