@@ -9,4 +9,6 @@ t/delegate.t
 t/file_delegate.t
 t/runmodes/mode1.pl
 t/startrunmode.t
+t/is_auto_runmode.t
+t/is_delegate_auto_runmode.t
 META.yml                                Module meta-data (added by MakeMaker)

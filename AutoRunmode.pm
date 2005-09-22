@@ -6,7 +6,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 our @ISA = qw(Exporter);
 
@@ -59,26 +59,13 @@ sub cgiapp_prerun{
 		unless ($rm =~ /\W/){
 		
 			# check :Runmodes
-			my $sub = $self->can($rm);
-			if ($sub){;
-				my @attribs =  attributes::get($sub);
-				foreach (@attribs){
-					$self->run_modes( $rm => $rm), return
-						if $_ eq 'Runmode';
-				}
-			}
+			$self->run_modes( $rm => $rm), return
+				if is_attribute_auto_runmode($self, $rm);
 		
 			# check delegate
-			my $delegate = $self->param('::Plugin::AutoRunmode::delegate');
-			if ($delegate and not exists $__illegal_names{$rm}){
-				$sub = $delegate->can($rm);
-				if ($sub){
-					# construct a closure, as we need a second
-					# parameter (the delegate)
-					my $closure = sub { $sub->($_[0], $delegate); };
-					$self->run_modes( $rm => $closure);
-				}
-			}
+			my $sub = is_delegate_auto_runmode($self, $rm);
+			$self->run_modes( $rm => $sub) if $sub;
+			
 		}
 	}
 }
@@ -134,6 +121,36 @@ sub _find_name_of_startmode_in_pkg{
 	die "failed to find name for StartRunmode code ref $ref in package $pkg\n";
 }
 
+sub is_attribute_auto_runmode{
+	my($app, $rm) = @_;
+	my $sub = $app->can($rm);
+	return unless $sub;
+	my @attribs =  attributes::get($sub);
+	foreach (@attribs){
+		return $sub if $_ eq 'Runmode';
+	}
+	return undef;
+}
+
+sub is_delegate_auto_runmode{
+	my($app, $rm) = @_;
+	my $delegate = $app->param('::Plugin::AutoRunmode::delegate');
+	return unless $delegate;
+	return if exists $__illegal_names{$rm};
+	
+	my $sub = $delegate->can($rm);
+	return unless $sub;
+	
+	# construct a closure, as we need a second
+	# parameter (the delegate)
+	my $closure = sub { $sub->($_[0], $delegate); };
+	
+	return $closure;	
+}
+
+sub is_auto_runmode{
+	return is_attribute_auto_runmode(@_) || is_delegate_auto_runmode(@_);
+}
 
 
 
@@ -346,6 +363,24 @@ by this module:
 
 	can isa VERSION AUTOLOAD new DESTROY
 
+
+=head2 Effect on the run_modes map
+
+This module only inserts the current run mode into the
+run_mode map (unless it is already in there). It does not
+place any other :Runmodes there. As a result of this 
+behaviour, users of AutoRunmode will most likely find the
+run mode map almost completely empty. This can lead to
+strange results if you expect a more complete list of possible run modes
+there. At this time, there is no workaround for this.
+Feel free to complain to the author if you have a requirement here.
+
+It is possible, however, to query the AutoRunmode plugin if
+an AutoRunmode exists for a given name.
+
+  my $check = CGI::Application::Plugin::AutoRunmode::is_auto_runmode($self, $name)
+
+This function returns a code ref if such an AutoRunmode exists. 
 
 =head1 SEE ALSO
 

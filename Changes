@@ -1,5 +1,10 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.09  Wed Sep 21 2005
+    - is_auto_runmode (proposed by Michael Graham for interoperability 
+      with CAP::Forward)
+
+
 0.08  Sat Jul 17 2005
 	- :StartRunmode
 	- attribute names are now case-insensitive
