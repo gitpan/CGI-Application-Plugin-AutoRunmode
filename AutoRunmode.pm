@@ -1,22 +1,93 @@
 package CGI::Application::Plugin::AutoRunmode;
 
 use strict;
-use attributes;
 require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
+
+
+our %RUNMODES = ();
+
+# two different versions of this module,
+# depending on whether Attribute::Handlers is
+# available
+
+my $has_ah;
+BEGIN{
+	eval 'use Attribute::Handlers; $has_ah=1;'
+}
+
+if ($has_ah){
+	$has_ah = eval <<'WITH_AH';
+
+sub CGI::Application::Runmode :ATTR(CODE) {
+	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
+	no strict 'refs';
+	$RUNMODES{"$ref"} = 1;
+}
+sub CGI::Application::StartRunmode :ATTR(CODE) {
+	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
+	install_start_mode($pkg, $ref);
+}
+
+# the Attribute::Handler version still exports a MODIFY_CODE_ATTRIBUTES
+# but only to provide backwards compatibility (case-independent attribute
+# names )
+
+sub MODIFY_CODE_ATTRIBUTES{
+	my ($pkg, $ref, @attr) = @_;
+	foreach (@attr){
+		if (uc $_ eq 'RUNMODE'){
+			$_ = 'Runmode';
+			next;
+		}
+		if (uc $_ eq 'STARTRUNMODE'){
+			$_ = 'StartRunmode';
+			next;
+		}
+	}
+	return $pkg->SUPER::MODIFY_CODE_ATTRIBUTES($ref, @attr);
+}
+
+1;
+WITH_AH
+	warn "failed to load Attribute::Handlers version of CAP:AutoRunmode $@" if $@;
+}
+
+
+
+unless ($has_ah){
+	eval <<'WITHOUT_AH' or die $@;
+sub MODIFY_CODE_ATTRIBUTES{
+	my ($pkg, $ref, @attr) = @_;
+	
+	my @unknown;
+	foreach (@attr){
+		my $u = uc $_;
+		$CGI::Application::Plugin::AutoRunmode::RUNMODES{"$ref"} = 1, next
+			if $u eq 'RUNMODE';
+		if ($u eq 'STARTRUNMODE'){
+			install_start_mode($pkg, $ref);
+			next;
+		}
+		push @unknown, $_;
+	}
+	return @unknown;
+}
+1;
+WITHOUT_AH
+}
+
+
 
 our @ISA = qw(Exporter);
 
 # always export the attribute handlers
-sub import{
-		__PACKAGE__->export_to_level(1, @_, qw[
-		 	MODIFY_CODE_ATTRIBUTES
-			FETCH_CODE_ATTRIBUTES
-		 ]
-		 );
+sub import{ 
+		__PACKAGE__->export_to_level(1, @_, 'MODIFY_CODE_ATTRIBUTES'); 
+		
 		 # if CGI::App > 4 install the hook
 		 # (unless cgiapp_prerun requested)
 		 if ( @_ < 2 and $CGI::Application::VERSION >= 4 ){
@@ -30,7 +101,6 @@ sub import{
 our @EXPORT_OK = qw[
 		cgiapp_prerun
 		MODIFY_CODE_ATTRIBUTES
-		FETCH_CODE_ATTRIBUTES
 	];
 
 
@@ -71,44 +141,41 @@ sub cgiapp_prerun{
 }
 
 
-
-sub MODIFY_CODE_ATTRIBUTES{
-	my ($pkg, $ref, @attr) = @_;
-	my @unknown;
-	foreach (@attr){
-		my $u = uc $_;
-		$CGI::Application::Plugin::AutoRunmode::RUNMODES{"$ref"} = 1, next
-			if $u eq 'RUNMODE';
-		if ($u eq 'STARTRUNMODE'){
-			no strict 'refs';
-			die "StartRunmode for package $pkg is already installed\n"
-				if defined *{"${pkg}::start_mode"};
-			my $memory;
-			*{"${pkg}::start_mode"} = sub{
+sub install_start_mode{
+	my ($pkg, $ref) = @_;
+	
+	no strict 'refs';
+	die "StartRunmode for package $pkg is already installed\n"
+		if defined *{"${pkg}::start_mode"};
+	
+	my $memory;
+	
+	#if (ref $ref eq 'GLOB') {
+	#	$memory = *{$ref}{NAME};
+	#	$ref = *{$ref}{CODE};
+	#}
+	
+	$RUNMODES{"$ref"} = 1;
+	
+	*{"${pkg}::start_mode"} = sub{
 				 return if @_ > 1;
 				 return $memory if $memory;
 				 return $memory = _find_name_of_startmode_in_pkg($ref, $pkg);
 			};
-			
-			$CGI::Application::Plugin::AutoRunmode::RUNMODES{"$ref"} = 1;
-			next;
-		}
-		push @unknown, $_;
-	}
-	return @unknown;
+	
+	
 }
 
-sub FETCH_CODE_ATTRIBUTES{
-	my ($pkg, $sub) = @_;
-	$sub = $CGI::Application::Plugin::AutoRunmode::RUNMODES{"$sub"};
-	return $sub ? ('Runmode') : (); 
-}
+
+
+
 
 # code for this inspired by Devel::Symdump
 sub _find_name_of_startmode_in_pkg{
 	my ($ref, $pkg) = @_;
-	no strict;
-	while (($key,$val) = each(%{*{"$pkg\::"}})) {
+	no strict 'refs';
+	#return *{$ref}{NAME} if ref $ref eq 'GLOB';
+	while (my ($key,$val) = each(%{*{"$pkg\::"}})) {
 			local(*ENTRY) = $val;
 			if (defined $val && defined *ENTRY{CODE}) {
 				next unless *ENTRY{CODE} eq $ref;
@@ -125,10 +192,16 @@ sub is_attribute_auto_runmode{
 	my($app, $rm) = @_;
 	my $sub = $app->can($rm);
 	return unless $sub;
-	my @attribs =  attributes::get($sub);
-	foreach (@attribs){
-		return $sub if $_ eq 'Runmode';
-	}
+	return $sub if $RUNMODES{"$sub"};
+	# also check the GLOB
+	#if ($has_ah){
+	#	no strict 'refs';
+	#	my $pkg = ref $app;
+	#	warn "${pkg}::${rm}";
+	#	use Data::Dumper;
+	#	warn Dumper \%RUNMODES;
+	#	return $sub if $RUNMODES{*{"${pkg}::${rm}"}};
+	#}
 	return undef;
 }
 
