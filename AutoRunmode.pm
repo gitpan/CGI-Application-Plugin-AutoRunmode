@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 
 our %RUNMODES = ();
@@ -14,10 +14,10 @@ our %RUNMODES = ();
 # depending on whether Attribute::Handlers is
 # available
 
-my $has_ah;
+
 BEGIN{
-	eval 'use Attribute::Handlers; $has_ah=1;'
-}
+	my $has_ah;
+	eval 'use Attribute::Handlers; $has_ah=1;';
 
 if ($has_ah){
 	$has_ah = eval <<'WITH_AH';
@@ -80,6 +80,7 @@ sub MODIFY_CODE_ATTRIBUTES{
 WITHOUT_AH
 }
 
+}
 
 
 our @ISA = qw(Exporter);
