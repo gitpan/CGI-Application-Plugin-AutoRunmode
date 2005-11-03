@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 
 our %RUNMODES = ();
@@ -212,14 +212,20 @@ sub is_delegate_auto_runmode{
 	return unless $delegate;
 	return if exists $__illegal_names{$rm};
 	
-	my $sub = $delegate->can($rm);
-	return unless $sub;
 	
-	# construct a closure, as we need a second
-	# parameter (the delegate)
-	my $closure = sub { $sub->($_[0], $delegate); };
+	my @delegates = ref($delegate) eq 'ARRAY' ? @$delegate
+                                               : ($delegate);
+
+    foreach my $delegate (@delegates) {
+		my $sub = $delegate->can($rm);
+		next unless $sub;
+		
+		# construct a closure, as we need a second
+		# parameter (the delegate)
+		my $closure = sub { $sub->($_[0], $delegate); };
+		return $closure;
+    } 
 	
-	return $closure;	
 }
 
 sub is_auto_runmode{
@@ -309,6 +315,10 @@ You can also mix both approaches.
 Delegate runmodes receive two parameters: The first one is the CGI::App
 instance, followed by the delegate instance or class name. This can be useful
 if you have delegate objects that contain state.
+
+It is possible to chain multiple delegates by specifying an array reference
+containing the delegate instances or class names. This chain is
+checked from left to right and the runmode will be delegated to the first match.
 
 =back
 

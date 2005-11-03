@@ -1,5 +1,9 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.12  Thu Nov 3 2005
+    - support for multiple delegates, based on a patch submitted by 
+      Larry Leszczynski
+
 0.11  Tue Oct 18 2005
     - applied a patch by Cees Hek to fix problems with subclassing introduced
       with 0.10

@@ -1,7 +1,7 @@
 #########################
 
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode') };
 
 #########################
@@ -119,5 +119,34 @@ my $q = new CGI;
 	my $t = $app->run;
 	ok ($t =~ /called mode3 aaa/, $testname);
 }
+
+# delegate chain
+
+{	
+	my $testname = "delegate chain: call first one";
+	$q->param(rm => 'mode1');
+	my $app = new MyTestApp(QUERY=>$q);
+	$app->param("::Plugin::AutoRunmode::delegate"
+		=> [
+			 'MyTestDelegate',
+		   	bless {hey => 'bbb'}, 'MyTestSubDelegate'
+		   ]);
+	my $t = $app->run;
+	ok ($t =~ /called mode1/, $testname);
+}
+
+{	
+	my $testname = "delegate chain: call second one";
+	$q->param(rm => 'mode3');
+	my $app = new MyTestApp(QUERY=>$q);
+	$app->param("::Plugin::AutoRunmode::delegate"
+		=> [
+			 'MyTestDelegate',
+		   	bless {hey => 'bbb'}, 'MyTestSubDelegate'
+		   ]);
+	my $t = $app->run;
+	ok ($t =~ /called mode3 bbb/, $testname);
+}
+
 
 
