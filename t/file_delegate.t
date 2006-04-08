@@ -1,3 +1,4 @@
+#!perl -T
 #########################
 
 
@@ -24,7 +25,7 @@ BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode::FileDelegate') };
 
 $ENV{CGI_APP_RETURN_ONLY} = 1;
 $ENV{REQUEST_METHOD} = 'GET';
-$ENV{QUERY_STRING} = 'rm=mode1';
+$ENV{QUERY_STRING} = 'rm=mode1&tainted=' . $ENV{PATH};
 
 use CGI;
 my $q = new CGI;

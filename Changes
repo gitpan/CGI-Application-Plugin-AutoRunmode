@@ -1,5 +1,10 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.13  Sat Apr 8 2006
+    - put the :Runmodes directly in the run_modes map 
+    	(only for CGI::App >= 4 and using Attribute::Handlers)
+	- make FileDelegate compatible with Taint mode
+
 0.12  Thu Nov 3 2005
     - support for multiple delegates, based on a patch submitted by 
       Larry Leszczynski

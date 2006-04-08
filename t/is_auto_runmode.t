@@ -1,3 +1,4 @@
+#!perl -T
 # This test suite has been contributed by Michael Graham
 # who also suggested the is_auto_runmode function
 

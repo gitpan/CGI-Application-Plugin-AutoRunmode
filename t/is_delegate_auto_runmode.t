@@ -1,3 +1,4 @@
+#!perl -T
 use Test::More tests => 7;
 BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode') };
 

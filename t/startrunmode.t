@@ -1,3 +1,5 @@
+#!perl -T
+
 use Test::More tests => 4;
 use strict;
 use warnings;

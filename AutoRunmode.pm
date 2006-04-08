@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 
 our %RUNMODES = ();
@@ -14,9 +14,9 @@ our %RUNMODES = ();
 # depending on whether Attribute::Handlers is
 # available
 
+my $has_ah;
 
 BEGIN{
-	my $has_ah;
 	eval 'use Attribute::Handlers; $has_ah=1;';
 
 if ($has_ah){
@@ -26,6 +26,17 @@ sub CGI::Application::Runmode :ATTR(CODE) {
 	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
 	no strict 'refs';
 	$RUNMODES{"$ref"} = 1;
+	if ($CGI::Application::VERSION >= 4){
+		# also install the init-hook to register
+		# named runmodes 
+		my $name = *{$glob}{NAME};
+		if ($name ne 'ANON'){
+			$pkg->add_callback('init', sub{ 
+				$_[0]->run_modes( $name => $ref ) 
+					if ($_[0]->can($name)) eq $ref
+			} )
+		}
+	}
 }
 sub CGI::Application::StartRunmode :ATTR(CODE) {
 	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
@@ -88,15 +99,18 @@ our @ISA = qw(Exporter);
 # always export the attribute handlers
 sub import{ 
 		__PACKAGE__->export_to_level(1, @_, 'MODIFY_CODE_ATTRIBUTES'); 
-		
+		 
 		 # if CGI::App > 4 install the hook
 		 # (unless cgiapp_prerun requested)
 		 if ( @_ < 2 and $CGI::Application::VERSION >= 4 ){
 		 		my $caller = scalar(caller);
 		 		if (UNIVERSAL::isa($caller, 'CGI::Application')){
-                	$caller->add_callback('prerun', \&cgiapp_prerun);
+		 			$caller->add_callback('prerun', \&cgiapp_prerun);
                 }
 		 }
+		 
+		
+		 
 };
 
 our @EXPORT_OK = qw[
@@ -126,9 +140,9 @@ sub cgiapp_prerun{
 	return unless defined $rm;
 	
 	unless (exists $rmodes{$rm}){
-		# security check: disallow non-word characters 
-		unless ($rm =~ /\W/){
-		
+		# security check / untaint : disallow non-word characters 
+		if ($rm =~ /^(\w+)$/){
+			$rm = $1;
 			# check :Runmodes
 			$self->run_modes( $rm => $rm), return
 				if is_attribute_auto_runmode($self, $rm);
@@ -140,6 +154,7 @@ sub cgiapp_prerun{
 		}
 	}
 }
+
 
 
 sub install_start_mode{

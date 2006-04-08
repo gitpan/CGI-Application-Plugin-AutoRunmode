@@ -3,10 +3,11 @@ package CGI::Application::Plugin::AutoRunmode::FileDelegate;
 use strict;
 use Carp;
 
-our $VERSION = '0.08';
+our $VERSION = '0.13';
 
 sub new{
 	my ($pkg, $directory) = @_;
+	$directory = "./$directory" unless (index ($directory, '/') == 0);	# to keep taint-mode happy where ./ is not in @INC
 	my $self = $directory;
 	# check if the directory exists
 	croak "$self is not a directory" unless -d $self;
