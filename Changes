@@ -1,5 +1,10 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.14  Sun May 21 2006
+	- fix for the Attribute::Handlers/mod_perl problems
+	  (stop relying on code being executed in the CHECK phase,
+	  which is problematic in mod_perl, use BEGIN instead)
+
 0.13  Sat Apr 8 2006
     - put the :Runmodes directly in the run_modes map 
     	(only for CGI::App >= 4 and using Attribute::Handlers)

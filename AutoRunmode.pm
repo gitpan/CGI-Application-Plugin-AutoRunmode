@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 
 our %RUNMODES = ();
@@ -22,11 +22,15 @@ BEGIN{
 if ($has_ah){
 	$has_ah = eval <<'WITH_AH';
 
-sub CGI::Application::Runmode :ATTR(CODE) {
+# run this handler twice:
+# in CHECK when we have the name, and also in BEGIN
+# (because CHECK does not seem to work in mod_perl) 
+
+sub CGI::Application::Runmode :ATTR(CODE,BEGIN,CHECK) {
 	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
 	no strict 'refs';
 	$RUNMODES{"$ref"} = 1;
-	if ($CGI::Application::VERSION >= 4){
+	if ($CGI::Application::VERSION >= 4 && $phase eq 'CHECK'){
 		# also install the init-hook to register
 		# named runmodes 
 		my $name = *{$glob}{NAME};
@@ -38,7 +42,7 @@ sub CGI::Application::Runmode :ATTR(CODE) {
 		}
 	}
 }
-sub CGI::Application::StartRunmode :ATTR(CODE) {
+sub CGI::Application::StartRunmode :ATTR(CODE,BEGIN) {
 	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
 	install_start_mode($pkg, $ref);
 }
@@ -498,6 +502,12 @@ L<CGI::Application>
 The CGI::App wiki at 
 L<http://www.cgi-app.org/>.
 
+=item *
+
+L<CGI::Application::Plugin::ActionDispatch> provides an alternative
+set of attributes that dispatch according to PATH_INFO. It is very
+similar to the mechanism used in the Catalyst framework.
+
 =back
 
 =head1 AUTHOR
@@ -506,7 +516,7 @@ Thilo Planz, E<lt>thilo@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2004/05 by Thilo Planz
+Copyright 2004-06 by Thilo Planz
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
