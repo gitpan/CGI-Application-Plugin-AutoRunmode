@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 
 our %RUNMODES = ();
@@ -46,6 +46,10 @@ sub CGI::Application::StartRunmode :ATTR(CODE,BEGIN) {
 	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
 	install_start_mode($pkg, $ref);
 }
+sub CGI::Application::ErrorRunmode :ATTR(CODE,BEGIN) {
+	my ( $pkg, $glob, $ref, $attr, $data, $phase ) = @_;
+	install_error_mode($pkg, $ref);
+}
 
 # the Attribute::Handler version still exports a MODIFY_CODE_ATTRIBUTES
 # but only to provide backwards compatibility (case-independent attribute
@@ -60,6 +64,10 @@ sub MODIFY_CODE_ATTRIBUTES{
 		}
 		if (uc $_ eq 'STARTRUNMODE'){
 			$_ = 'StartRunmode';
+			next;
+		}
+		if (uc $_ eq 'ERRORRUNMODE'){
+			$_ = 'ErrorRunmode';
 			next;
 		}
 	}
@@ -85,6 +93,10 @@ sub MODIFY_CODE_ATTRIBUTES{
 			if $u eq 'RUNMODE';
 		if ($u eq 'STARTRUNMODE'){
 			install_start_mode($pkg, $ref);
+			next;
+		}
+		if ($u eq 'ERRORRUNMODE'){
+			install_error_mode($pkg, $ref);
 			next;
 		}
 		push @unknown, $_;
@@ -180,7 +192,33 @@ sub install_start_mode{
 	*{"${pkg}::start_mode"} = sub{
 				 return if @_ > 1;
 				 return $memory if $memory;
-				 return $memory = _find_name_of_startmode_in_pkg($ref, $pkg);
+				 return $memory = _find_name_of_sub_in_pkg($ref, $pkg);
+			};
+	
+	
+}
+
+
+sub install_error_mode{
+	my ($pkg, $ref) = @_;
+	
+	no strict 'refs';
+	die "ErrorRunmode for package $pkg is already installed\n"
+		if defined *{"${pkg}::error_mode"};
+	
+	my $memory;
+	
+	#if (ref $ref eq 'GLOB') {
+	#	$memory = *{$ref}{NAME};
+	#	$ref = *{$ref}{CODE};
+	#}
+	
+	$RUNMODES{"$ref"} = 1;
+	
+	*{"${pkg}::error_mode"} = sub{
+				 return if @_ > 1;
+				 return $memory if $memory;
+				 return $memory = _find_name_of_sub_in_pkg($ref, $pkg);
 			};
 	
 	
@@ -191,7 +229,7 @@ sub install_start_mode{
 
 
 # code for this inspired by Devel::Symdump
-sub _find_name_of_startmode_in_pkg{
+sub _find_name_of_sub_in_pkg{
 	my ($ref, $pkg) = @_;
 	no strict 'refs';
 	#return *{$ref}{NAME} if ref $ref eq 'GLOB';
@@ -416,6 +454,14 @@ The runmode can then be executed by CGI::App
 as if it had been set up by $self->run_modes()
 in the first place.
 
+=head3 The run mode called "start"
+
+Note that because the plugin only gets activated
+when you call a run mode that is not registered
+in the usual run mode map, you cannot use it to
+create a run mode called C<< start >>. The CGI:App base
+class always registers a run mode of that name.
+
 
 =head2 Does it still work if I change the run mode in cgiapp_prerun ?
 
@@ -443,6 +489,15 @@ the "traditional" way of setting the start run mode (calling
 C<< $self->start_mode('name') >>) is disabled and can no longer
 be used in this application (including subclasses and instance
 scripts).
+
+=head2 ErrorRunmode
+
+The attribute ErrorRunmode designates that subroutine to 
+be the error run mode. If you use this feature,
+the "traditional" way of setting the error run mode (calling
+C<< $self->error_mode('name') >>) is disabled and can no longer
+be used in this application (including subclasses and instance
+scripts). This feature requires CGI::App of at least version 3.30.
 
 =head2 A word on security
 

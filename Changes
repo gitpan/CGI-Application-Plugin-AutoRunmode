@@ -1,5 +1,8 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.15  Sun Dec 17 2006
+    - added :ErrorRunmode (proposed by Robert Hicks)
+
 0.14  Sun May 21 2006
 	- fix for the Attribute::Handlers/mod_perl problems
 	  (stop relying on code being executed in the CHECK phase,
