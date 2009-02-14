@@ -1,13 +1,14 @@
 #!perl -T
 
-use Test::More tests => 5;
+use Test::More tests => 7;
 use strict;
 use warnings;
+use CGI;
 BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode') };
 
 
 SKIP: {
-	skip 'requires CGI::App v3.30 and above', 4
+	skip 'requires CGI::App v3.30 and above', 6
 		unless $CGI::Application::VERSION >= '3.30';
 		
 $ENV{CGI_APP_RETURN_ONLY} = 1;
@@ -50,6 +51,35 @@ $ENV{CGI_APP_RETURN_ONLY} = 1;
 		ok ($t =~ /called mode1/, $testname) or diag $t;
 	}
 	
+	
+	{
+		my $testname = "error runmode is not a regular runmode";
+		my $q = new CGI({'rm' =>'mode1'});
+		my $app = new MyTestApp(QUERY=>$q);
+		
+		eval{ $app->run; };
+		ok ($@ =~ /No such run mode 'mode1'/, $testname);
+	}
+	
+		
+	{
+		package MyTestSubApp2;
+		use base 'MyTestApp';
+ 		sub mode2 : ErrorRunmode :Runmode {
+	 		'called mode2 in the sub class';
+	 	}
+	}
+	
+	{
+		my $testname = "error runmode is also a regular runmode";
+		my $q = new CGI({'rm' =>'mode2'});
+		my $app = new MyTestSubApp2(QUERY=>$q);
+		my $t = $app->run; 
+		ok ($t =~ /called mode2 in the sub class/, $testname);
+	}
+	
+	
+	
 	{
 		my $testname = "autodetect error runmode in subclass and case-insensitive ";
 	
@@ -73,6 +103,11 @@ $ENV{CGI_APP_RETURN_ONLY} = 1;
 CODE
 		ok ($@ =~ /ErrorRunmode for package MyTestAppBroken is already installed/, $testname);
 	}
+	
+	
+	
+
+	
 
 TODO:
 { 
@@ -87,5 +122,14 @@ TODO:
 			or diag $t;
 	}
 }
+
+
+
+	
+	
+	
+
+
+
 
 }

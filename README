@@ -1,4 +1,4 @@
-CGI/Application/Plugin/AutoRunmode version 0.15
+CGI/Application/Plugin/AutoRunmode version 0.16
 ===============================================
 
 This plugin for CGI::Application provides easy
@@ -33,7 +33,7 @@ This module requires these other modules and libraries:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2004-06 Thilo Planz
+Copyright (C) 2004-2009 Thilo Planz
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

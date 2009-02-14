@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 
 our %RUNMODES = ();
@@ -177,8 +177,14 @@ sub install_start_mode{
 	my ($pkg, $ref) = @_;
 	
 	no strict 'refs';
-	die "StartRunmode for package $pkg is already installed\n"
-		if defined *{"${pkg}::start_mode"};
+	if (defined *{"${pkg}::start_mode"}){
+		if ($ENV{MOD_PERL} && exists $INC{'Apache2::Reload'}){
+			# be lenient with Apache2::Reload
+			# see https://rt.cpan.org/Ticket/Display.html?id=35987
+		}else{
+			die "StartRunmode for package $pkg is already installed\n";
+		}
+	}	
 	
 	my $memory;
 	
@@ -203,8 +209,14 @@ sub install_error_mode{
 	my ($pkg, $ref) = @_;
 	
 	no strict 'refs';
-	die "ErrorRunmode for package $pkg is already installed\n"
-		if defined *{"${pkg}::error_mode"};
+	if ( defined *{"${pkg}::error_mode"}){
+		if ($ENV{MOD_PERL} && exists $INC{'Apache2::Reload'}){
+			# be lenient with Apache2::Reload
+			# see https://rt.cpan.org/Ticket/Display.html?id=35987
+		}else{
+			die "ErrorRunmode for package $pkg is already installed\n";
+		}
+	}
 	
 	my $memory;
 	
@@ -212,8 +224,6 @@ sub install_error_mode{
 	#	$memory = *{$ref}{NAME};
 	#	$ref = *{$ref}{CODE};
 	#}
-	
-	$RUNMODES{"$ref"} = 1;
 	
 	*{"${pkg}::error_mode"} = sub{
 				 return if @_ > 1;
@@ -499,6 +509,13 @@ C<< $self->error_mode('name') >>) is disabled and can no longer
 be used in this application (including subclasses and instance
 scripts). This feature requires CGI::App of at least version 3.30.
 
+Note that this "error run mode" is not a run mode that 
+is directly accessible using its name as a query parameter.
+It will only be dispatched to internally if the original
+run mode produced an error. This is exactly how plain
+CGI:App C<< error_mode >> behaves as well (you could still
+declare the method to also be a C<< :Runmode >> ).
+
 =head2 A word on security
 
 The whole idea of this module (to reduce code complexity
@@ -571,7 +588,7 @@ Thilo Planz, E<lt>thilo@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2004-06 by Thilo Planz
+Copyright 2004-2009 by Thilo Planz
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

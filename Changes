@@ -1,5 +1,11 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.16  Sat Feb 14 2009
+    - :ErrorRunmode is no longer registered as a "real" runmode
+        (see CPAN RT #36706: [patch] ErrorRunmode should not create a run mode)
+    - support for Apache2::Reload
+        (see CPAN RT #35987: StartRunmode dies with Apache2::Reload)
+
 0.15  Sun Dec 17 2006
     - added :ErrorRunmode (proposed by Robert Hicks)
 
