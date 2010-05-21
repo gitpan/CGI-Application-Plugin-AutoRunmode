@@ -13,4 +13,6 @@ t/is_auto_runmode.t
 t/is_delegate_auto_runmode.t
 t/attribute_handlers.t
 t/error_runmode.t
+t/apache2_reload.t
+t/mocklibs/Apache2/Reload.pm
 META.yml                                Module meta-data (added by MakeMaker)

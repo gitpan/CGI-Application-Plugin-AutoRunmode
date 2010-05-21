@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 
 our %RUNMODES = ();
@@ -178,7 +178,7 @@ sub install_start_mode{
 	
 	no strict 'refs';
 	if (defined *{"${pkg}::start_mode"}){
-		if ($ENV{MOD_PERL} && exists $INC{'Apache2::Reload'}){
+		if ($ENV{MOD_PERL} && exists $INC{'Apache2/Reload.pm'}){
 			# be lenient with Apache2::Reload
 			# see https://rt.cpan.org/Ticket/Display.html?id=35987
 		}else{
@@ -194,7 +194,7 @@ sub install_start_mode{
 	#}
 	
 	$RUNMODES{"$ref"} = 1;
-	
+	no warnings 'redefine';
 	*{"${pkg}::start_mode"} = sub{
 				 return if @_ > 1;
 				 return $memory if $memory;
@@ -210,7 +210,7 @@ sub install_error_mode{
 	
 	no strict 'refs';
 	if ( defined *{"${pkg}::error_mode"}){
-		if ($ENV{MOD_PERL} && exists $INC{'Apache2::Reload'}){
+		if ($ENV{MOD_PERL} && exists $INC{'Apache2/Reload.pm'}){
 			# be lenient with Apache2::Reload
 			# see https://rt.cpan.org/Ticket/Display.html?id=35987
 		}else{
@@ -224,7 +224,7 @@ sub install_error_mode{
 	#	$memory = *{$ref}{NAME};
 	#	$ref = *{$ref}{CODE};
 	#}
-	
+	no warnings 'redefine';
 	*{"${pkg}::error_mode"} = sub{
 				 return if @_ > 1;
 				 return $memory if $memory;
@@ -588,7 +588,7 @@ Thilo Planz, E<lt>thilo@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2004-2009 by Thilo Planz
+Copyright 2004-2010 by Thilo Planz
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
