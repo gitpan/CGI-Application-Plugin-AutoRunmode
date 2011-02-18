@@ -3,28 +3,34 @@ package CGI::Application::Plugin::AutoRunmode::FileDelegate;
 use strict;
 use Carp;
 
-our $VERSION = '0.13';
+our $VERSION = '0.18';
 
 sub new{
-	my ($pkg, $directory) = @_;
-	$directory = "./$directory" unless (index ($directory, '/') == 0);	# to keep taint-mode happy where ./ is not in @INC
-	my $self = $directory;
-	# check if the directory exists
-	croak "$self is not a directory" unless -d $self;
-	return bless \$self, $pkg;
+	my ($pkg, @directories) = @_;
+	foreach my $directory (@directories){
+		# keep taint-mode happy where ./ is not in @INC
+		$directory = "./$directory" unless (index ($directory, '/') == 0);
+		# check if the directory exists
+		croak "$directory is not a directory" unless -d $directory;
+	}
+	return bless \@directories, $pkg;
 }
 
 sub can{
 	my($self, $name) = @_;
-	# check the directory
-	return UNIVERSAL::can($self, $name)
-		unless -e "$$self/$name.pl"; 
-	my $can = do "$$self/$name.pl";
-	if ($@ or $!){
-		croak "could not evaluate runmode in file $$self/$name.pl: $@ $!";
+	# check the directories
+	foreach (@$self){
+		if (-e "$_/$name.pl"){
+			my $can = do "$_/$name.pl";
+			if ($@ or $!){
+				croak "could not evaluate runmode in file $_/$name.pl: $@ $!";
+			}
+			return $can if ref $can eq 'CODE';
+			croak "runmode file $_/$name.pl did not return a subroutine reference";
+		}
 	}
-	return $can if ref $can eq 'CODE';
-	croak "runmode file $$self/$name.pl did not return a subroutine reference";
+	
+	return UNIVERSAL::can($self, $name); 
 }
 
 1;
@@ -43,7 +49,7 @@ CGI::Application::Plugin::AutoRunmode::FileDelegate - delegate CGI::App run mode
 				# do something here
 		};
 		
-	# in file runmodes/another_run_mode
+	# in file runmodes/another_run_mode.pl
 		sub {
 				# do something else
 		};
@@ -79,6 +85,20 @@ without restarting your web server. In the case of plain CGI it means
 a reduced startup cost if you have many run modes (because only
 the one that you need gets parsed and loaded, along with dependent 
 modules).
+
+=head2 Using more than one directory with runmodes
+
+You can pass multiple directory paths to the constructor
+for the delegate:
+
+    	my $delegate = new CGI::Application::Plugin::AutoRunmode::FileDelegate
+			('/path/to/runmodes', '/path/to/more_runmodes')
+					
+
+In this case, they will be searched in order. The first 
+matching file becomes the run mode. In the case of errors
+with that file, the module will croak (and not continue
+the search in the remaining directories).
 
 =head1 BUGS
 

@@ -1,5 +1,9 @@
 Revision history for Perl extension CGI::Application::Plugin::AutoRunmode.
 
+0.18  Fri Feb 18 2011
+    - add support for multiple directories in FileDelegate, suggested by Jiří Pavlovský
+        (see CPAN RT #65695: support multiple directories in FileDelegate)
+
 0.17  Fri Mar 21 2010
     - fix support for Apache2::Reload (the changes in 0.16 did not work)
         (see CPAN RT #35987: StartRunmode dies with Apache2::Reload)

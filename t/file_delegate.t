@@ -2,7 +2,7 @@
 #########################
 
 
-use Test::More tests => 3;
+use Test::More tests => 5;
 BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode::FileDelegate') };
 
 #########################
@@ -18,6 +18,21 @@ BEGIN { use_ok('CGI::Application::Plugin::AutoRunmode::FileDelegate') };
 		$self->param(
 			'::Plugin::AutoRunmode::delegate' => 
 				new CGI::Application::Plugin::AutoRunmode::FileDelegate('t/runmodes') 
+		);
+	}
+}
+
+{ 
+	package MyTestAppWithTwoDirectories;
+	use base 'CGI::Application';
+	use CGI::Application::Plugin::AutoRunmode 
+		qw [ cgiapp_prerun];
+		
+	sub setup{
+		my $self = shift;
+		$self->param(
+			'::Plugin::AutoRunmode::delegate' => 
+				new CGI::Application::Plugin::AutoRunmode::FileDelegate('t/runmodes', 't/runmodes/sub') 
 		);
 	}
 }
@@ -46,6 +61,22 @@ my $q = new CGI;
 	ok ($@ =~ /^No such/, $testname);
 }
 
+{	
+	my $testname = "security check also disallows subdirectories";
+	$q->param(rm => 'sub/submode');
+	my $app = new MyTestApp(QUERY=>$q);
+	eval{ my $t = $app->run; };
+	ok ($@ =~ /^No such/, $testname);
+}
+
+
+{	
+	my $testname = "multiple directories";
+	$q->param(rm => 'submode');
+	my $app = new MyTestAppWithTwoDirectories(QUERY=>$q);
+	my $t = $app->run;
+	ok ($t =~ /called submode/, $testname);
+}
 
 
 

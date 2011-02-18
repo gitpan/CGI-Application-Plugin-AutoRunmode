@@ -5,7 +5,7 @@ require Exporter;
 require CGI::Application;
 use Carp;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 
 our %RUNMODES = ();
@@ -586,9 +586,17 @@ similar to the mechanism used in the Catalyst framework.
 
 Thilo Planz, E<lt>thilo@cpan.orgE<gt>
 
+=head1 SUPPORT
+
+Please use the request tracker at CPAN to report
+bugs or feature requests: L<https://rt.cpan.org/Public/Dist/Display.html?Name=CGI-Application-Plugin-AutoRunmode>
+
+If you want to support the development of this module with money,
+you can donate using Flattr: L<https://flattr.com/thing/132835>
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2004-2010 by Thilo Planz
+Copyright 2004-2011 by Thilo Planz
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

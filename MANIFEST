@@ -15,4 +15,5 @@ t/attribute_handlers.t
 t/error_runmode.t
 t/apache2_reload.t
 t/mocklibs/Apache2/Reload.pm
+t/runmodes/sub/submode.pl
 META.yml                                Module meta-data (added by MakeMaker)
